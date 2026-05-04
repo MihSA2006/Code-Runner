@@ -14,12 +14,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Ensure work directory exists
-RUN mkdir -p /root/.coderunner_tmp
+# Ensure work directory and data directory exist
+RUN mkdir -p /root/.coderunner_tmp /app/data && chmod 777 /app/data
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
-ENV DATABASE_URL=/app/coderunner.db
+ENV DATABASE_URL=/app/data/coderunner.db
 
 EXPOSE 8000
 

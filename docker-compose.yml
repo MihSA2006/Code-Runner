@@ -32,9 +32,11 @@ services:
       - "8000:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./coderunner.db:/app/coderunner.db
+      - ./coderunner.db:/app/data/coderunner.db
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=/app/data/coderunner.db
     depends_on:
       - python-sandbox
       - javascript-sandbox
