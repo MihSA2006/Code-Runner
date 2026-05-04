@@ -30,32 +30,50 @@ CodeRunner est une API d'exécution de code à distance, conçue pour faire fonc
 
 ---
 
-## Exécution
+## Quick Start (Docker Compose)
 
-### Étape 1 : Builder les Sandboxes (Environnements Docker)
+La méthode la plus simple pour lancer tout l'écosystème CodeRunner est d'utiliser Docker Compose.
 
-L'API s'appuie sur des images Docker spécifiques pour isoler et exécuter chaque langage de programmation. Vous devez d'abord construire ces images. Nous utilisons Docker Compose pour cela.
+```bash
+# Build et lancement de tous les services
+docker compose up --build -d
 
-Lancez la commande suivante à la racine du projet :
+# Voir les logs de l'API
+docker logs -f coderunner-api
+```
+
+L'API sera disponible sur : **http://localhost:8000**
+
+---
+
+## Installation Manuelle (Développement)
+
+### Étape 1 : Builder les Sandboxes
+
+L'API s'appuie sur des images Docker spécifiques. Buildez-les d'abord :
 ```bash
 docker compose build
 ```
 
-Vous pouvez vérifier que les images ont bien été créées en affichant l'inventaire Docker :
-```bash
-docker images | grep coderunner
-```
+### Étape 2 : Lancer l'API localement
 
-### Étape 2 : Lancer l'API
+1. Créer un environnement virtuel :
+   ```bash
+   python -m venv venv
+   # Windows : .\venv\Scripts\activate
+   # Linux/Mac : source venv/bin/activate
+   ```
+2. Installer les dépendances :
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Lancer le serveur :
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-Une fois les images prêtes et l'environnement virtuel activé, démarrez le serveur FastAPI.
+---
 
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Vous pouvez ensuite retrouver la documentation Swagger à l'adresse suivante : http://localhost:8000/docs.
-
-## Documentation de l'API
-
-Consultez le fichier `ENDPOINT.md` inclus dans le répertoire pour la liste complète et le format des requêtes pour tous les points de terminaison de l'application.
+## Documentation
+- **Swagger UI** : http://localhost:8000/docs
+- **Endpoints** : Consultez [ENDPOINT.md](ENDPOINT.md)

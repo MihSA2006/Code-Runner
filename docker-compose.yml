@@ -25,3 +25,22 @@ services:
     build:
       context: ./sandboxes/java
     image: coderunner-java
+
+  api:
+    build: .
+    image: coderunner-api
+    container_name: coderunner-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./coderunner.db:/app/coderunner.db
+    env_file:
+      - .env
+    depends_on:
+      - python-sandbox
+      - javascript-sandbox
+      - c-sandbox
+      - cpp-sandbox
+      - java-sandbox
+    restart: unless-stopped
