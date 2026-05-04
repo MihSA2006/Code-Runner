@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  python-sandbox:
+    build:
+      context: ./sandboxes/python
+    image: coderunner-python
+
+  javascript-sandbox:
+    build:
+      context: ./sandboxes/javascript
+    image: coderunner-javascript
+
+  c-sandbox:
+    build:
+      context: ./sandboxes/c
+    image: coderunner-c
+
+  cpp-sandbox:
+    build:
+      context: ./sandboxes/cpp
+    image: coderunner-cpp
+
+  java-sandbox:
+    build:
+      context: ./sandboxes/java
+    image: coderunner-java
