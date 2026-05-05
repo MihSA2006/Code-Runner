@@ -12,7 +12,6 @@ from app.api.routes import router
 from app.db.database import init_db
 from app.core.config import settings
 from app.core.cleanup import start_cleanup_scheduler
-from app.core.executor import init_work_dir
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -20,7 +19,6 @@ limiter = Limiter(key_func=get_remote_address)
 async def lifespan(app: FastAPI):
     print(f"\n🚀 {settings.APP_NAME} v{settings.APP_VERSION} démarrage...")
     await init_db()
-    init_work_dir()
     cleanup_task = asyncio.create_task(start_cleanup_scheduler())
     print("✅ Prêt\n")
     yield
