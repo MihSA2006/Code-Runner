@@ -14,16 +14,6 @@ services:
       context: ./sandboxes/c
     image: coderunner-c
 
-  cpp-sandbox:
-    build:
-      context: ./sandboxes/cpp
-    image: coderunner-cpp
-
-  java-sandbox:
-    build:
-      context: ./sandboxes/java
-    image: coderunner-java
-
   api:
     build: .
     image: coderunner-api
@@ -41,8 +31,6 @@ services:
       - python-sandbox
       - javascript-sandbox
       - c-sandbox
-      - cpp-sandbox
-      - java-sandbox
     restart: unless-stopped
 
 volumes:
