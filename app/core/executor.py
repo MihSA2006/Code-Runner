@@ -18,32 +18,33 @@ LANGUAGE_IMAGES = {
     "python":     "coderunner-python",
     "javascript": "coderunner-javascript",
     "c":          "coderunner-c",
-    "cpp":        "coderunner-cpp",
-    "java":       "coderunner-java",
 }
 
 LANGUAGE_COMMANDS = {
     "python":     ["python3", "/code/main.py"],
     "javascript": ["node", "/code/main.js"],
     "c":          ["sh", "-c", "gcc /code/main.c -o /tmp/main 2>&1 && /tmp/main"],
-    "cpp":        ["sh", "-c", "g++ /code/main.cpp -o /tmp/main 2>&1 && /tmp/main"],
-    "java":       ["sh", "-c", "cp /code/main.java /tmp/Main.java && "
-                               "javac /tmp/Main.java -d /tmp 2>&1 && "
-                               "java -cp /tmp Main"],
 }
 
 LANGUAGE_EXTENSIONS = {
     "python":     "main.py",
     "javascript": "main.js",
     "c":          "main.c",
-    "cpp":        "main.cpp",
-    "java":       "main.java",
 }
 
 WORK_DIR = os.path.join(os.path.expanduser("~"), ".coderunner_tmp")
 
-# ThreadPool dédié pour les exécutions Docker (max 5 simultanées)
-_executor = ThreadPoolExecutor(max_workers=5, thread_name_prefix="docker_worker")
+# Docker client singleton
+_docker_client: Optional[docker.DockerClient] = None
+
+# Semaphore pour contrôler la concurrence
+_semaphore: Optional[asyncio.Semaphore] = None
+
+# ThreadPool dédié pour les exécutions Docker
+_executor = ThreadPoolExecutor(
+    max_workers=settings.MAX_CONCURRENT_EXECUTIONS,
+    thread_name_prefix="docker_worker"
+)
 
 
 # ──────────────────────────────────────────
@@ -55,12 +56,28 @@ def init_work_dir():
     print(f"📁 Dossier de travail : {WORK_DIR}")
 
 
+def get_docker_client() -> docker.DockerClient:
+    """Retourne un client Docker singleton pour éviter les reconnexions."""
+    global _docker_client
+    if _docker_client is None:
+        _docker_client = docker.from_env()
+    return _docker_client
+
+
+def get_semaphore() -> asyncio.Semaphore:
+    """Retourne le semaphore pour contrôler la concurrence."""
+    global _semaphore
+    if _semaphore is None:
+        _semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_EXECUTIONS)
+    return _semaphore
+
+
 # ──────────────────────────────────────────
 # Exécution Docker
 # ──────────────────────────────────────────
 
 def _run_container(image: str, command: list, code: str, filename: str) -> Tuple[str, str, int]:
-    client  = docker.from_env()
+    client  = get_docker_client()
     job_id  = str(uuid.uuid4()).replace("-", "")
     job_dir = os.path.join(WORK_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
@@ -155,10 +172,12 @@ async def execute_and_wait(code: str, language: str) -> dict:
         filename = LANGUAGE_EXTENSIONS[language]
 
         loop = asyncio.get_event_loop()
-        stdout, stderr, exit_code = await asyncio.wait_for(
-            loop.run_in_executor(_executor, _run_container, image, command, code, filename),
-            timeout=settings.MAX_EXECUTION_TIME + 5
-        )
+
+        async with get_semaphore():
+            stdout, stderr, exit_code = await asyncio.wait_for(
+                loop.run_in_executor(_executor, _run_container, image, command, code, filename),
+                timeout=settings.MAX_EXECUTION_TIME + 5
+            )
 
         exec_time = round(time.time() - start, 3)
         status    = "done" if exit_code == 0 else "error"
@@ -213,10 +232,12 @@ async def _execute_task(token: str, code: str, language: str):
         filename = LANGUAGE_EXTENSIONS[language]
 
         loop = asyncio.get_event_loop()
-        stdout, stderr, exit_code = await asyncio.wait_for(
-            loop.run_in_executor(_executor, _run_container, image, command, code, filename),
-            timeout=settings.MAX_EXECUTION_TIME + 5
-        )
+
+        async with get_semaphore():
+            stdout, stderr, exit_code = await asyncio.wait_for(
+                loop.run_in_executor(_executor, _run_container, image, command, code, filename),
+                timeout=settings.MAX_EXECUTION_TIME + 5
+            )
 
         status = "done" if exit_code == 0 else "error"
         output = truncate_output(stdout.strip()) if stdout.strip() else None

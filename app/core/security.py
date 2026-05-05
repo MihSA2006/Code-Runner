@@ -31,7 +31,6 @@ DANGEROUS_PATTERNS = {
         r"require\s*\(\s*['\"]http",
         r"require\s*\(\s*['\"]net",
         r"#include\s*<\s*sys/socket",
-        r"import\s+java\.net",
     ],
 
     # Accès au système de fichiers sensibles
@@ -63,17 +62,6 @@ LANGUAGE_DANGEROUS_PATTERNS = {
         r"system\s*\(",
         r"popen\s*\(",
         r"exec[lv][pe]?\s*\(",
-    ],
-    "cpp": [
-        r"system\s*\(",
-        r"popen\s*\(",
-        r"exec[lv][pe]?\s*\(",
-    ],
-    "java": [
-        r"Runtime\.getRuntime\(\)\.exec",
-        r"ProcessBuilder",
-        r"System\.exit",
-        r"new\s+File\s*\(\s*['\"]\/",
     ],
 }
 

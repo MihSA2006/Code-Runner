@@ -12,7 +12,7 @@ DB_PATH = settings.DATABASE_URL
 # ──────────────────────────────────────────
 
 async def init_db():
-    """Crée la table si elle n'existe pas encore."""
+    """Crée la table et les index si nécessaire."""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS executions (
@@ -24,6 +24,10 @@ async def init_db():
                 created_at   REAL NOT NULL,
                 completed_at REAL
             )
+        """)
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_executions_created_at
+            ON executions(created_at)
         """)
         await db.commit()
     print("✅ Base de données initialisée")

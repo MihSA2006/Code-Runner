@@ -37,10 +37,8 @@ Exécutez du code dans un sandbox Docker isolé.
 
 ### Langages supportés
 - 🐍 **Python** 3.11
-- ☕ **Java** 21
 - 🟨 **JavaScript** (Node.js 20)
 - 🔵 **C** (GCC)
-- 🔵 **C++** (G++)
 
 ### Workflow
 1. `POST /api/v1/execute` → Soumettre un code, recevoir un **token**

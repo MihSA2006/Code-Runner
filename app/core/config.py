@@ -13,13 +13,14 @@ class Settings:
     MAX_EXECUTION_TIME: int = int(os.getenv("MAX_EXECUTION_TIME", "10"))
     MAX_MEMORY: str         = os.getenv("MAX_MEMORY", "128m")
     MAX_CPU: float          = float(os.getenv("MAX_CPU", "0.5"))
+    MAX_CONCURRENT_EXECUTIONS: int = int(os.getenv("MAX_CONCURRENT_EXECUTIONS", "20"))
 
     # Rate limiting
-    RATE_LIMIT_EXECUTE: str = os.getenv("RATE_LIMIT_EXECUTE", "10/minute")
+    RATE_LIMIT_EXECUTE: str = os.getenv("RATE_LIMIT_EXECUTE", "30/minute")
     RATE_LIMIT_RESULT: str  = os.getenv("RATE_LIMIT_RESULT", "60/minute")
 
     # Code limits
-    MAX_CODE_LENGTH: int   = int(os.getenv("MAX_CODE_LENGTH", "50000"))
+    MAX_CODE_LENGTH: int   = int(os.getenv("MAX_CODE_LENGTH", "10000"))
     MAX_OUTPUT_LENGTH: int = int(os.getenv("MAX_OUTPUT_LENGTH", "10000"))
 
     # Database
@@ -30,6 +31,6 @@ class Settings:
     CLEANUP_INTERVAL: int = int(os.getenv("CLEANUP_INTERVAL", "60"))
 
     # Langages supportés
-    SUPPORTED_LANGUAGES = ["python", "java", "javascript", "c", "cpp"]
+    SUPPORTED_LANGUAGES = ["python", "javascript", "c"]
 
 settings = Settings()

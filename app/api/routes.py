@@ -8,7 +8,7 @@ import time
 
 from app.core.executor import execute_code, execute_and_wait, LANGUAGE_IMAGES
 from app.core.security import validate_code
-from app.db.database import get_execution, delete_execution, cleanup_expired
+from app.db.database import get_execution, delete_execution
 from app.core.config import settings
 
 router  = APIRouter()
@@ -77,8 +77,6 @@ async def execute_wait(request: Request, body: ExecuteRequest):
     Pas besoin de polling — un seul appel suffit.
     Idéal pour une plateforme de contest algo.
     """
-    await cleanup_expired()
-
     result = await execute_and_wait(body.code, body.language)
 
     if result["status"] == "rejected":
@@ -103,8 +101,6 @@ async def execute(request: Request, body: ExecuteRequest):
     Soumet un code, retourne immédiatement un token.
     Utiliser `GET /result/{token}` pour récupérer le résultat.
     """
-    await cleanup_expired()
-
     is_safe, reason = validate_code(body.code, body.language)
     if not is_safe:
         raise HTTPException(status_code=400, detail=f"Code refusé : {reason}")
