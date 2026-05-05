@@ -1,11 +1,9 @@
 import uuid
 import asyncio
 import docker
-import os
-import shutil
+import base64
 from concurrent.futures import ThreadPoolExecutor
 from docker.errors import DockerException, ImageNotFound
-from docker.types import Mount
 from typing import Tuple, Optional
 from app.db.database import create_execution, update_execution
 from app.core.config import settings
@@ -33,8 +31,6 @@ LANGUAGE_EXTENSIONS = {
     "c":          "main.c",
 }
 
-WORK_DIR = os.path.join(os.path.expanduser("~"), ".coderunner_tmp")
-
 # Docker client singleton
 _docker_client: Optional[docker.DockerClient] = None
 
@@ -51,11 +47,6 @@ _executor = ThreadPoolExecutor(
 # ──────────────────────────────────────────
 # Init
 # ──────────────────────────────────────────
-
-def init_work_dir():
-    os.makedirs(WORK_DIR, exist_ok=True)
-    print(f"📁 Dossier de travail : {WORK_DIR}")
-
 
 def get_docker_client() -> docker.DockerClient:
     """Retourne un client Docker singleton pour éviter les reconnexions."""
@@ -77,52 +68,20 @@ def get_semaphore() -> asyncio.Semaphore:
 # Exécution Docker
 # ──────────────────────────────────────────
 
-def _adjust_command(command: list, job_id: str, filename: str) -> list:
-    """Replace /code placeholders with actual job path in the volume."""
-    path = f"/root/.coderunner_tmp/{job_id}/{filename}"
-    adjusted = []
-    for arg in command:
-        if arg == "/code/main.py":
-            adjusted.append(path)
-        elif arg == "/code/main.js":
-            adjusted.append(path)
-        elif arg == "/code/main.c":
-            adjusted.append(path)
-        elif "/code/main" in arg:
-            adjusted.append(arg.replace("/code/main.c", path).replace("/code/main.py", path).replace("/code/main.js", path))
-        else:
-            adjusted.append(arg)
-    return adjusted
-
-
 def _run_container(image: str, command: list, code: str, filename: str) -> Tuple[str, str, int]:
-    client  = get_docker_client()
-    job_id  = str(uuid.uuid4()).replace("-", "")
-    job_dir = os.path.join(WORK_DIR, job_id)
-    os.makedirs(job_dir, exist_ok=True)
-    code_file = os.path.join(job_dir, filename)
+    client = get_docker_client()
+    code_b64 = base64.b64encode(code.encode('utf-8')).decode('ascii')
+
+    cmd_str = ' '.join(f'"{arg}"' if ' ' in arg else arg for arg in command)
+    cmd_str = cmd_str.replace('/code/', '/tmp/job/')
+
+    shell_command = f"""mkdir -p /tmp/job && echo "{code_b64}" | base64 -d > /tmp/job/{filename} && chmod 644 /tmp/job/{filename} && {cmd_str}"""
 
     try:
-        with open(code_file, "w", encoding="utf-8") as f:
-            f.write(code)
-
-        if not os.path.exists(code_file):
-            return "", f"Erreur : impossible de créer {code_file}", 1
-
-        adjusted_command = _adjust_command(command, job_id, filename)
-
         container = client.containers.run(
             image=image,
-            command=adjusted_command,
+            command=["sh", "-c", shell_command],
             detach=True,
-            mounts=[
-                Mount(
-                    source="work_dir",
-                    target="/root/.coderunner_tmp",
-                    type="volume",
-                    read_only=True
-                )
-            ],
             network_disabled=True,
             user="runner",
             cap_drop=["ALL"],
@@ -135,20 +94,14 @@ def _run_container(image: str, command: list, code: str, filename: str) -> Tuple
             remove=False,
         )
 
-        try:
-            result    = container.wait(timeout=settings.MAX_EXECUTION_TIME)
-            exit_code = result.get("StatusCode", 1)
-            stdout    = container.logs(stdout=True,  stderr=False).decode("utf-8", errors="replace")
-            stderr    = container.logs(stdout=False, stderr=True).decode("utf-8", errors="replace")
-            return stdout, stderr, exit_code
-        finally:
-            try:
-                container.remove(force=True)
-            except Exception:
-                pass
+        result = container.wait(timeout=settings.MAX_EXECUTION_TIME)
+        exit_code = result.get("StatusCode", 1)
+        stdout = container.logs(stdout=True, stderr=False).decode("utf-8", errors="replace")
+        stderr = container.logs(stdout=False, stderr=True).decode("utf-8", errors="replace")
+        return stdout, stderr, exit_code
     finally:
         try:
-            shutil.rmtree(job_dir, ignore_errors=True)
+            container.remove(force=True)
         except Exception:
             pass
 
