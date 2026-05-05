@@ -5,6 +5,7 @@ import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from docker.errors import DockerException, ImageNotFound
+from docker.types import Mount
 from typing import Tuple, Optional
 from app.db.database import create_execution, update_execution
 from app.core.config import settings
@@ -76,6 +77,24 @@ def get_semaphore() -> asyncio.Semaphore:
 # Exécution Docker
 # ──────────────────────────────────────────
 
+def _adjust_command(command: list, job_id: str, filename: str) -> list:
+    """Replace /code placeholders with actual job path in the volume."""
+    path = f"/root/.coderunner_tmp/{job_id}/{filename}"
+    adjusted = []
+    for arg in command:
+        if arg == "/code/main.py":
+            adjusted.append(path)
+        elif arg == "/code/main.js":
+            adjusted.append(path)
+        elif arg == "/code/main.c":
+            adjusted.append(path)
+        elif "/code/main" in arg:
+            adjusted.append(arg.replace("/code/main.c", path).replace("/code/main.py", path).replace("/code/main.js", path))
+        else:
+            adjusted.append(arg)
+    return adjusted
+
+
 def _run_container(image: str, command: list, code: str, filename: str) -> Tuple[str, str, int]:
     client  = get_docker_client()
     job_id  = str(uuid.uuid4()).replace("-", "")
@@ -90,11 +109,20 @@ def _run_container(image: str, command: list, code: str, filename: str) -> Tuple
         if not os.path.exists(code_file):
             return "", f"Erreur : impossible de créer {code_file}", 1
 
+        adjusted_command = _adjust_command(command, job_id, filename)
+
         container = client.containers.run(
             image=image,
-            command=command,
+            command=adjusted_command,
             detach=True,
-            volumes={job_dir: {"bind": "/code", "mode": "ro"}},
+            mounts=[
+                Mount(
+                    source="work_dir",
+                    target="/root/.coderunner_tmp",
+                    type="volume",
+                    read_only=True
+                )
+            ],
             network_disabled=True,
             user="runner",
             cap_drop=["ALL"],
