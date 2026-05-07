@@ -154,11 +154,27 @@ async def execute_and_wait(code: str, language: str) -> dict:
 
         loop = asyncio.get_event_loop()
 
-        async with get_semaphore():
+        # On attend que le semaphore soit disponible avec un timeout
+        # Cela évite de bloquer la requête HTTP indéfiniment si le serveur est saturé
+        try:
+            await asyncio.wait_for(get_semaphore().acquire(), timeout=30)
+        except asyncio.TimeoutError:
+            return {
+                "token":          None,
+                "status":         "rejected",
+                "language":       language,
+                "output":         None,
+                "error":          "Serveur surchargé : file d'attente pleine. Réessayez plus tard.",
+                "execution_time": None,
+            }
+
+        try:
             stdout, stderr, exit_code = await asyncio.wait_for(
                 loop.run_in_executor(_executor, _run_container, image, command, code, filename),
                 timeout=settings.MAX_EXECUTION_TIME + 5
             )
+        finally:
+            get_semaphore().release()
 
         exec_time = round(time.time() - start, 3)
         status    = "done" if exit_code == 0 else "error"

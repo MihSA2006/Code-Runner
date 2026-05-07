@@ -10,13 +10,13 @@ class Settings:
     DEBUG: bool          = os.getenv("DEBUG", "True") == "True"
 
     # Execution
-    MAX_EXECUTION_TIME: int = int(os.getenv("MAX_EXECUTION_TIME", "10"))
+    MAX_EXECUTION_TIME: int = int(os.getenv("MAX_EXECUTION_TIME", "15"))
     MAX_MEMORY: str         = os.getenv("MAX_MEMORY", "128m")
     MAX_CPU: float          = float(os.getenv("MAX_CPU", "0.5"))
-    MAX_CONCURRENT_EXECUTIONS: int = int(os.getenv("MAX_CONCURRENT_EXECUTIONS", "20"))
+    MAX_CONCURRENT_EXECUTIONS: int = int(os.getenv("MAX_CONCURRENT_EXECUTIONS", "70"))
 
     # Rate limiting
-    RATE_LIMIT_EXECUTE: str = os.getenv("RATE_LIMIT_EXECUTE", "30/minute")
+    RATE_LIMIT_EXECUTE: str = os.getenv("RATE_LIMIT_EXECUTE", "500/minute")
     RATE_LIMIT_RESULT: str  = os.getenv("RATE_LIMIT_RESULT", "60/minute")
 
     # Code limits
